@@ -9,3 +9,4 @@ tests/
 rec_train_set.sample.txt
 .env
 *.egg-info
+.idea
