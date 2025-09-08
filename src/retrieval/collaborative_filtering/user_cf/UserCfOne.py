@@ -17,9 +17,9 @@ def init_user_date() -> Dict:
 
 
 # 基于皮尔逊相关系数，计算用户相似性矩阵
-def calc_similarity_matrix(user_data: Dict) -> DataFrame:
-    user_ids = list(user_data.keys())
-    similarity_matrix = pd.DataFrame(
+def calc_similarity_matrix(user_data: Dict[str, Dict[str, int]]) -> DataFrame:
+    user_ids: List = list(user_data.keys())
+    similarity_matrix: DataFrame = pd.DataFrame(
         np.identity(len(user_data)),
         index=user_ids,
         columns=user_ids,
@@ -65,11 +65,12 @@ def training_model():
 
 
 class UserCf:
-    def __init__(self, user_data: Dict):
+    def __init__(self, user_data: Dict[str, Dict[str, int]]):
         self.user_data = user_data
+        # 基于皮尔逊相关系数，计算用户相似性矩阵
         self.similarity_matrix = calc_similarity_matrix(user_data)
 
-    def find_similarity_users(self, target_user: str, top_n: int) -> List:
+    def find_similarity_users(self, target_user: str, top_n: int) -> List[str]:
         """ 计算与目标用户最相似的前top_n个用户
         Args:
             target_user(str): 目标用户
@@ -78,7 +79,7 @@ class UserCf:
             List: 最相似用户列表
         """
         # 由于最相似的用户为自己，去除本身
-        sim_users = self.similarity_matrix[target_user].sort_values(ascending=False)[1:top_n + 1].index.tolist()
+        sim_users: List[str] = self.similarity_matrix[target_user].sort_values(ascending=False)[1:top_n + 1].index.tolist()
         return sim_users
 
     def pred_score(self, target_user: str, top_n: int, target_item: str) -> int:
@@ -106,9 +107,12 @@ class UserCf:
 
 def test_find_similarity_users():
     cf = UserCf(init_user_date())
+    print(f'用户相似性矩阵: \n{cf.similarity_matrix}')
+
     target_user = 'user1'
     top_n = 2
     sim_users = cf.find_similarity_users(target_user, top_n)
+    print(type(sim_users[0]))
     print(f'与用户{target_user}最相似的{top_n}个用户为：{sim_users}')
 
 
@@ -122,6 +126,6 @@ def test_pred_score():
 
 
 if __name__ == '__main__':
-    # test_find_similarity_users()
+    test_find_similarity_users()
     # test_pred_score()
-    training_model()
+    # training_model()
