@@ -6,7 +6,7 @@ from pandas import DataFrame
 
 
 # 数据准备
-def init_user_date() -> Dict:
+def init_user_date() -> Dict[str, Dict[str, int]]:
     return {
         'user1': {'item1': 5, 'item2': 3, 'item3': 4, 'item4': 4},
         'user2': {'item1': 3, 'item2': 1, 'item3': 2, 'item4': 3, 'item5': 3},
@@ -18,6 +18,18 @@ def init_user_date() -> Dict:
 
 # 基于皮尔逊相关系数，计算用户相似性矩阵
 def calc_similarity_matrix(user_data: Dict[str, Dict[str, int]]) -> DataFrame:
+    """
+    计算用户之间的相似度矩阵
+
+    该函数通过计算用户之间共同评分物品的皮尔逊相关系数来构建相似度矩阵。
+    矩阵中的每个元素(i,j)表示用户i和用户j之间的相似度。
+
+    Args:
+        user_data (Dict[str, Dict[str, int]]): 用户评分数据，格式为{用户ID: {物品ID: 评分}}
+
+    Returns:
+        DataFrame: 用户相似度矩阵，行索引和列索引均为用户ID，对角线元素为1（自己与自己的相似度）
+    """
     user_ids: List = list(user_data.keys())
     similarity_matrix: DataFrame = pd.DataFrame(
         np.identity(len(user_data)),
@@ -37,7 +49,7 @@ def calc_similarity_matrix(user_data: Dict[str, Dict[str, int]]) -> DataFrame:
                     continue
                 vec1.append(rating1)
                 vec2.append(rating2)
-            # 计算不同用户之间的皮尔逊相关系数
+            # 通过两个用户的评分数组(同一物品下班相同),计算不同用户之间的皮尔逊相关系数
             similarity_matrix[u1][u2] = np.corrcoef(vec1, vec2)[0][1]
     return similarity_matrix
 
@@ -45,19 +57,14 @@ def calc_similarity_matrix(user_data: Dict[str, Dict[str, int]]) -> DataFrame:
 def training_model():
     import funrec
     from funrec.utils import build_metrics_table
-
     # 加载配置
     config = funrec.load_config('user_cf')
-
     # 加载数据
     train_data, test_data = funrec.load_data(config.data)
-
     # 准备特征
     feature_columns, processed_data = funrec.prepare_features(config.features, train_data, test_data)
-
     # 训练模型
     models = funrec.train_model(config.training, feature_columns, processed_data)
-
     # 评估模型
     metrics = funrec.evaluate_model(models, processed_data, config.evaluation, feature_columns)
 
@@ -112,7 +119,6 @@ def test_find_similarity_users():
     target_user = 'user1'
     top_n = 2
     sim_users = cf.find_similarity_users(target_user, top_n)
-    print(type(sim_users[0]))
     print(f'与用户{target_user}最相似的{top_n}个用户为：{sim_users}')
 
 
