@@ -2,6 +2,8 @@
 from typing import Dict, List
 
 from pandas import DataFrame
+import pandas as pd
+import numpy as np
 
 
 def init_user_date() -> Dict[str, Dict[str, int]]:
@@ -34,8 +36,6 @@ def calc_similarity_matrix(item_data: Dict[str, Dict[str, int]]) -> DataFrame:
     Returns:
         DataFrame: 物品相似度矩阵，行列索引均为物品ID，对角线为1（自己与自己的相似度）
     """
-    import pandas as pd
-    import numpy as np
     item_ids: List[str] = list(item_data.keys())
     similarity_matrix = pd.DataFrame(
         np.identity(len(item_data)),
@@ -67,7 +67,16 @@ class ItemCf:
         # 基于皮尔逊相关系数，计算物品相似性矩阵
         self.similarity_matrix = calc_similarity_matrix(item_data)
 
-    def find_similarity_item(self, target_user: str, target_item: str, num: int):
+    def find_similarity_item(self, target_user: str, target_item: str, num: int) -> List[str]:
+        """
+        查找与目标物品最相似的物品中，目标用户评分过的前N个物品
+        Args:
+            target_user (str): 目标用户的标识符
+            target_item (str): 目标物品的标识符
+            num (int): 需要查找的相似物品数量
+        Returns:
+            无返回值，直接打印结果
+        """
         sim_items = []
         sim_items_list = self.similarity_matrix[target_item].sort_values(ascending=False).index.tolist()
         for item in sim_items_list:
@@ -77,3 +86,21 @@ class ItemCf:
             if len(sim_items) == num:
                 break
         print(f'与物品{target_item}最相似的{num}个物品为：{sim_items}')
+        return sim_items
+
+    def pred_score(self, target_user: str, target_item: str, num: int) -> int:
+        target_user_mean_rating = np.mean(list(self.item_data[target_item].values()))
+        weighted_scores = 0.
+        corr_values_sum = 0.
+
+        sim_items = self.find_similarity_item(target_user, target_item, num)
+        for item in sim_items:
+            corr_value = self.similarity_matrix[target_item][item]
+            user_mean_rating = np.mean(list(self.item_data[item].values()))
+
+            weighted_scores += corr_value * (self.item_data[item][target_user] - user_mean_rating)
+            corr_values_sum += corr_value
+
+        target_item_pred = target_user_mean_rating + weighted_scores / corr_values_sum
+        # print(f'用户{target_user}对物品{target_item}的预测评分为：{target_item_pred}')
+        return target_item_pred
